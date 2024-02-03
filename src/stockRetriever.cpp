@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-const char *configPath = "../data/config.json";
+const std::string configPath = "../data/config.json";
 
 std::string getApiKey() {
   std::ifstream file(configPath, std::ifstream::in);
