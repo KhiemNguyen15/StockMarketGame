@@ -8,12 +8,14 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 find_package(CURL REQUIRED)
 find_package(DPP REQUIRED)
+find_package(SQLite3 REQUIRED)
 
 include_directories(include ${JsonCpp_INCLUDE_DIR})
 
 add_executable(StockMarketGame
   src/main.cpp
   src/stockRetriever.cpp
+  src/databaseHandler.cpp
 )
 
 target_include_directories(StockMarketGame PRIVATE
@@ -23,6 +25,7 @@ target_include_directories(StockMarketGame PRIVATE
 
 target_link_libraries(StockMarketGame PRIVATE
   CURL::libcurl
+  SQLite::SQLite3
   ${JsonCpp_LIBRARIES}
   ${DPP_LIBRARIES}
 )
