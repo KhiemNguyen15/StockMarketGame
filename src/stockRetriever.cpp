@@ -22,7 +22,7 @@ std::string getApiKey() {
   Json::CharReaderBuilder reader;
   Json::parseFromStream(reader, file, &root, nullptr);
 
-  std::string apiKey = root["alpha_vantage_api_key"].asString();
+  std::string apiKey = root["finnhub_api_key"].asString();
 
   return apiKey;
 }
@@ -36,9 +36,8 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb,
 
 std::string retrieveJsonData(const std::string &symbol) {
   CURL *curl = curl_easy_init();
-  std::string url =
-      "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" +
-      symbol + "&apikey=" + getApiKey();
+  std::string url = "https://finnhub.io/api/v1/quote?symbol=" + symbol +
+                    "&token=" + getApiKey();
 
   if (curl) {
     CURLcode res;
@@ -70,13 +69,14 @@ double parseStockPrice(const std::string &jsonData) {
   std::istringstream jsonStream(jsonData);
   Json::parseFromStream(reader, jsonStream, &root, nullptr);
 
-  if (root.isMember("Global Quote")) {
-    std::string priceString = root["Global Quote"]["05. price"].asString();
-    return std::stod(priceString);
-  } else {
-    std::cerr << "Failed to extract price from JSON response." << std::endl;
+  double price = root["c"].asDouble();
+
+  if (price == 0) {
+    std::cerr << "Unable to retrieve price value." << std::endl;
     return -1.0;
   }
+
+  return price;
 }
 
 double parsePercentChange(const std::string &jsonData) {
@@ -85,20 +85,12 @@ double parsePercentChange(const std::string &jsonData) {
   std::istringstream jsonStream(jsonData);
   Json::parseFromStream(reader, jsonStream, &root, nullptr);
 
-  if (root.isMember("Global Quote")) {
-    std::string percentChangeString =
-        root["Global Quote"]["10. change percent"].asString();
-
-    percentChangeString.pop_back();
-
-    double percentChange = std::stod(percentChangeString);
-
-    return percentChange;
-  } else {
-    std::cerr << "Failed to extract percent change from JSON response."
-              << std::endl;
+  if (root["dp"].isNull()) {
+    std::cerr << "Percent change value is null." << std::endl;
     return -1.0;
   }
+
+  return root["dp"].asDouble();
 }
 
 double getStockPrice(const std::string &symbol) {
