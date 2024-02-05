@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
       oss.str("");
 
-      oss << std::fixed << std::setprecision(4) << percentChange;
+      oss << std::fixed << std::setprecision(3) << percentChange;
       std::string percentChangeString = oss.str();
 
       oss.str("");
