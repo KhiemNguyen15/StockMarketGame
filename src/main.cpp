@@ -4,6 +4,7 @@
 #include <dpp/dispatcher.h>
 #include <dpp/dpp.h>
 #include <dpp/once.h>
+#include <dpp/presence.h>
 #include <dpp/restresults.h>
 #include <dpp/snowflake.h>
 #include <dpp/user.h>
@@ -184,6 +185,9 @@ int main(int argc, char *argv[]) {
   });
 
   bot.on_ready([&bot](const dpp::ready_t &event) {
+    bot.set_presence(
+        dpp::presence(dpp::ps_online, dpp::at_game, "with stonks"));
+
     if (dpp::run_once<struct clear_bot_commands>()) {
       bot.global_bulk_command_delete();
     }
