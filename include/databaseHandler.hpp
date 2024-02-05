@@ -1,15 +1,16 @@
 #ifndef DATABASE_HANDLER_HPP
 #define DATABASE_HANDLER_HPP
 
-#include <mutex>
 #include <sqlite3.h>
 #include <string>
 #include <vector>
 
+#define STARTING_MONEY 5000.00
+
 class DatabaseHandler {
 private:
   sqlite3 *db;
-  std::mutex connectionMutex;
+  // std::mutex connectionMutex;
 
   bool insertUser(const std::string &userId);
   bool insertUserStock(const std::string &userId, const std::string &stockName);

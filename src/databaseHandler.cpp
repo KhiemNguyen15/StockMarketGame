@@ -12,7 +12,7 @@ DatabaseHandler::DatabaseHandler(const std::string &dbPath) {
 DatabaseHandler::~DatabaseHandler() { sqlite3_close(db); }
 
 bool DatabaseHandler::insertUser(const std::string &userId) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   std::string insertUserQuery =
       "INSERT INTO users (user_id, balance) VALUES (?, ?)";
@@ -21,7 +21,7 @@ bool DatabaseHandler::insertUser(const std::string &userId) {
   if (sqlite3_prepare_v2(db, insertUserQuery.c_str(), -1, &stmt, nullptr) ==
       SQLITE_OK) {
     sqlite3_bind_text(stmt, 1, userId.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_double(stmt, 2, 1000.00);
+    sqlite3_bind_double(stmt, 2, STARTING_MONEY);
 
     int result = sqlite3_step(stmt);
 
@@ -42,7 +42,7 @@ bool DatabaseHandler::insertUser(const std::string &userId) {
 
 bool DatabaseHandler::insertUserStock(const std::string &userId,
                                       const std::string &stockName) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   std::string query = "INSERT INTO user_stocks (user_id, stock_name, quantity) "
                       "VALUES (?, ?, ?);";
@@ -71,7 +71,7 @@ bool DatabaseHandler::insertUserStock(const std::string &userId,
 }
 
 bool DatabaseHandler::userExists(const std::string &userId) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   std::string query = "SELECT 1 FROM users WHERE user_id = ?";
   sqlite3_stmt *stmt;
@@ -100,7 +100,7 @@ bool DatabaseHandler::userExists(const std::string &userId) {
 
 bool DatabaseHandler::userHasStock(const std::string &userId,
                                    const std::string &stockName) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   std::string query =
       "SELECT 1 FROM user_stocks WHERE user_id = ? AND stock_name = ?";
@@ -131,7 +131,7 @@ bool DatabaseHandler::userHasStock(const std::string &userId,
 }
 
 bool DatabaseHandler::createTables() {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   const std::string createUsersTableQuery = "CREATE TABLE IF NOT EXISTS users ("
                                             "user_id TEXT PRIMARY KEY,"
@@ -162,7 +162,7 @@ bool DatabaseHandler::createTables() {
 
 bool DatabaseHandler::updateUserBalance(const std::string &userId,
                                         double balanceChange) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   if (!userExists(userId)) {
     if (!insertUser(userId)) {
@@ -203,7 +203,7 @@ bool DatabaseHandler::updateUserBalance(const std::string &userId,
 bool DatabaseHandler::updateUserStock(const std::string &userId,
                                       const std::string &stockName,
                                       int quantityChange) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   if (!userHasStock(userId, stockName)) {
     if (!insertUserStock(userId, stockName)) {
@@ -245,7 +245,7 @@ bool DatabaseHandler::updateUserStock(const std::string &userId,
 
 std::vector<std::pair<std::string, int>>
 DatabaseHandler::getUserStocks(const std::string &userId) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   std::vector<std::pair<std::string, int>> userStocks;
 
@@ -274,7 +274,13 @@ DatabaseHandler::getUserStocks(const std::string &userId) {
 }
 
 double DatabaseHandler::getUserBalance(const std::string &userId) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
+
+  if (!userExists(userId)) {
+    if (!insertUser(userId)) {
+      return false;
+    }
+  }
 
   double balance = 0.0;
   std::string query = "SELECT balance FROM users WHERE user_id = ?";
@@ -298,7 +304,7 @@ double DatabaseHandler::getUserBalance(const std::string &userId) {
 
 int DatabaseHandler::getUserStockQuantity(const std::string &userId,
                                           const std::string &stockName) {
-  std::lock_guard<std::mutex> lock(connectionMutex);
+  // std::lock_guard<std::mutex> lock(connectionMutex);
 
   int stockQuantity = 0;
 
