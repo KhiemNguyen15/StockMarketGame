@@ -71,9 +71,13 @@ int main(int argc, char *argv[]) {
       oss << std::fixed << std::setprecision(4) << percentChange;
       std::string percentChangeString = oss.str();
 
-      std::string reply = "**Stock data for " + symbol + ":**\n" + "Price: $" +
-                          priceString +
-                          "\nPercent Change: " + percentChangeString + "%";
+      oss.str("");
+
+      oss << "**Stock data for " << symbol << ":**\n"
+          << "Price: $" << priceString
+          << "\nPercent Change: " << percentChangeString << "%";
+
+      std::string reply = oss.str();
 
       event.reply(reply);
     }
