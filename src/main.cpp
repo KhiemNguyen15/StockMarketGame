@@ -203,6 +203,21 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+
+    if (event.command.get_command_name() == "help") {
+      std::string reply = "## Commands"
+                          "\n> `/stockinfo [ticker]` - Retrieve data for a "
+                          "stock given the ticker"
+                          "\n> `/balance` - Display your current balance"
+                          "\n> `/buy [ticker] [quantity]` - Purchase stocks of "
+                          "the given ticker and quantity"
+                          "\n> `/sell [ticker] [quantity]` - Sell stocks of "
+                          "the given ticker and quantity"
+                          "\n> `/mystocks` - Display your current stocks"
+                          "\n> `/help` - Display this help message";
+
+      event.reply(reply);
+    }
   });
 
   bot.on_ready([&bot](const dpp::ready_t &event) {
@@ -237,11 +252,15 @@ int main(int argc, char *argv[]) {
       dpp::slashcommand getstockscommand("mystocks", "Displays your stocks.",
                                          bot.me.id);
 
+      dpp::slashcommand helpcommand("help", "Displays a list of commands.",
+                                    bot.me.id);
+
       bot.global_command_create(stockinfocommand);
       bot.global_command_create(balancecommand);
       bot.global_command_create(buycommand);
       bot.global_command_create(sellcommand);
       bot.global_command_create(getstockscommand);
+      bot.global_command_create(helpcommand);
     }
   });
 
