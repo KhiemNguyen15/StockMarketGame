@@ -1,4 +1,7 @@
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <dpp/appcommand.h>
 #include <dpp/cluster.h>
 #include <dpp/dispatcher.h>
@@ -54,31 +57,43 @@ int main(int argc, char *argv[]) {
 
     if (event.command.get_command_name() == "stockinfo") {
       std::string symbol = std::get<std::string>(event.get_parameter("ticker"));
+      std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
 
       double price = getStockPrice(symbol);
-      double percentChange = getPercentChange(symbol);
 
       if (price == -1.0) {
         event.reply("Invalid ticker.");
         return;
       }
 
+      double change = getChange(symbol);
+      double percentChange = getPercentChange(symbol);
+
       std::ostringstream oss;
+      oss.imbue(std::locale(""));
+
       oss << std::fixed << std::setprecision(2) << price;
       std::string priceString = oss.str();
 
       oss.str("");
 
-      oss << std::fixed << std::setprecision(3) << percentChange;
-      std::string percentChangeString = oss.str();
+      oss << std::fixed << std::setprecision(2) << change;
+      std::string changeString = oss.str();
 
       oss.str("");
 
-      oss << "**Stock data for " << symbol << ":**\n"
-          << "Price: $" << priceString
-          << "\nPercent Change: " << percentChangeString << "%";
+      oss << std::fixed << std::setprecision(2) << std::abs(percentChange);
+      std::string percentChangeString = oss.str();
 
-      std::string reply = oss.str();
+      std::ostringstream replyStream;
+
+      replyStream << "## Stock Data for " << symbol << "\n> **$" << priceString
+                  << " USD**"
+                  << "\n> " << (change > 0.0 ? "+" : "") << changeString << " ("
+                  << percentChangeString << "%) "
+                  << (percentChange < 0.0 ? "↓" : "↑");
+
+      std::string reply = replyStream.str();
 
       event.reply(reply);
     }
@@ -88,13 +103,14 @@ int main(int argc, char *argv[]) {
           dbHandler.getUserStocks(user.id.str());
 
       std::ostringstream replyStream;
-      replyStream << "**Your Stocks:**";
+      replyStream << "## Your Stocks:";
 
       for (const auto &stock : stocks) {
         std::string symbol = stock.first;
         int quantity = stock.second;
 
-        replyStream << "\nStock: " << symbol << "\n  Quantity: " << quantity;
+        replyStream << "\n> **Stock: " << symbol
+                    << "**\n> Quantity: " << quantity << "\n";
       }
 
       std::string reply = replyStream.str();
@@ -106,16 +122,19 @@ int main(int argc, char *argv[]) {
       double balance = dbHandler.getUserBalance(user.id.str());
 
       std::ostringstream oss;
+      oss.imbue(std::locale(""));
       oss << std::fixed << std::setprecision(2) << balance;
       std::string balanceString = oss.str();
 
-      std::string reply = "**Your Balance:**\n$" + balanceString;
+      std::string reply = "## Your Balance:\n> $" + balanceString;
 
       event.reply(reply);
     }
 
     if (event.command.get_command_name() == "buy") {
       std::string symbol = std::get<std::string>(event.get_parameter("ticker"));
+      std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
+
       std::optional<int64_t> quantityOptional =
           std::get<std::int64_t>(event.get_parameter("quantity"));
 
@@ -153,6 +172,8 @@ int main(int argc, char *argv[]) {
 
     if (event.command.get_command_name() == "sell") {
       std::string symbol = std::get<std::string>(event.get_parameter("ticker"));
+      std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
+
       std::optional<int64_t> quantityOptional =
           std::get<int64_t>(event.get_parameter("quantity"));
 
