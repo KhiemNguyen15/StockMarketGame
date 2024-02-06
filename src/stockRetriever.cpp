@@ -79,6 +79,20 @@ double parseStockPrice(const std::string &jsonData) {
   return price;
 }
 
+double parseChange(const std::string &jsonData) {
+  Json::CharReaderBuilder reader;
+  Json::Value root;
+  std::istringstream jsonStream(jsonData);
+  Json::parseFromStream(reader, jsonStream, &root, nullptr);
+
+  if (root["d"].isNull()) {
+    std::cerr << "Change value is null." << std::endl;
+    return -1.0;
+  }
+
+  return root["d"].asDouble();
+}
+
 double parsePercentChange(const std::string &jsonData) {
   Json::CharReaderBuilder reader;
   Json::Value root;
@@ -98,6 +112,16 @@ double getStockPrice(const std::string &symbol) {
 
   if (!jsonData.empty()) {
     return parseStockPrice(jsonData);
+  } else {
+    return -1.0;
+  }
+}
+
+double getChange(const std::string &symbol) {
+  std::string jsonData = retrieveJsonData(symbol);
+
+  if (!jsonData.empty()) {
+    return parseChange(jsonData);
   } else {
     return -1.0;
   }

@@ -5,6 +5,7 @@
 #include <string>
 
 double getStockPrice(const std::string &symbol);
+double getChange(const std::string &symbol);
 double getPercentChange(const std::string &symbol);
 
 #endif // STOCK_RETRIEVER_H
