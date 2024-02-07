@@ -147,12 +147,25 @@ bool DatabaseHandler::createTables() {
       "FOREIGN KEY (user_id) REFERENCES users(user_id)"
       ");";
 
+  const std::string createUserTransactionsTableQuery =
+      "CREATE TABLE IF NOT EXISTS user_transactions ("
+      "transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+      "user_id TEXT,"
+      "stock_name TEXT,"
+      "quantity INTEGER,"
+      "price REAL,"
+      "timestamp TEXT,"
+      "FOREIGN KEY (user_id) REFERENCES users(user_id)"
+      ");";
+
   int rc1 = sqlite3_exec(db, createUsersTableQuery.c_str(), nullptr, nullptr,
                          nullptr);
   int rc2 = sqlite3_exec(db, createUserStocksTableQuery.c_str(), nullptr,
                          nullptr, nullptr);
+  int rc3 = sqlite3_exec(db, createUserTransactionsTableQuery.c_str(), nullptr,
+                         nullptr, nullptr);
 
-  if (rc1 != SQLITE_OK || rc2 != SQLITE_OK) {
+  if (rc1 != SQLITE_OK || rc2 != SQLITE_OK || rc3 != SQLITE_OK) {
     std::cerr << "Failed to create tables." << std::endl;
     return false;
   }
@@ -237,6 +250,41 @@ bool DatabaseHandler::updateUserStock(const std::string &userId,
     }
   } else {
     std::cerr << "Failed to prepare statement for updating user's stock."
+              << std::endl;
+  }
+
+  return false;
+}
+
+bool DatabaseHandler::updateTransactionsHistory(const std::string &userId,
+                                                const std::string &stockName,
+                                                int quantity, double price,
+                                                const std::string &timestamp) {
+  // std::lock_guard<std::mutex> lock(connectionMutex);
+
+  std::string query = "INSERT INTO user_transactions (user_id, stock_name, "
+                      "quantity, price, timestamp)"
+                      "VALUES (?, ?, ?, ?, ?);";
+  sqlite3_stmt *stmt;
+
+  if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+    sqlite3_bind_text(stmt, 1, userId.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, stockName.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 3, quantity);
+    sqlite3_bind_double(stmt, 4, price);
+    sqlite3_bind_text(stmt, 5, timestamp.c_str(), -1, SQLITE_STATIC);
+
+    int result = sqlite3_step(stmt);
+
+    sqlite3_finalize(stmt);
+
+    if (result == SQLITE_DONE) {
+      return true;
+    } else {
+      std::cerr << "Failed to update user transactions." << std::endl;
+    }
+  } else {
+    std::cerr << "Failed to prepare statement for updating user transactions."
               << std::endl;
   }
 
@@ -330,4 +378,44 @@ int DatabaseHandler::getUserStockQuantity(const std::string &userId,
   }
 
   return stockQuantity;
+}
+
+std::vector<std::vector<std::string>>
+DatabaseHandler::getUserHistory(const std::string &userId) {
+  // std::lock_guard<std::mutex> lock(connectionMutex);
+
+  std::vector<std::vector<std::string>> history;
+
+  std::string query = "SELECT stock_name, quantity, price, timestamp FROM "
+                      "user_transactions WHERE user_id = ?";
+  sqlite3_stmt *stmt;
+
+  if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+    sqlite3_bind_text(stmt, 1, userId.c_str(), -1, SQLITE_STATIC);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+      std::vector<std::string> values;
+
+      const char *stockName =
+          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+      int quantity = sqlite3_column_int(stmt, 1);
+      double price = sqlite3_column_double(stmt, 2);
+      const char *timestamp =
+          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+
+      values.push_back(stockName);
+      values.push_back(std::to_string(quantity));
+      values.push_back(std::to_string(price));
+      values.push_back(timestamp);
+
+      history.push_back(values);
+    }
+
+    sqlite3_finalize(stmt);
+  } else {
+    std::cerr << "Failed to prepare statement for getting transaction history."
+              << std::endl;
+  }
+
+  return history;
 }

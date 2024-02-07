@@ -1,7 +1,9 @@
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <ctime>
 #include <dpp/appcommand.h>
 #include <dpp/cluster.h>
 #include <dpp/dispatcher.h>
@@ -42,6 +44,17 @@ std::string getBotToken() {
   std::string token = root["discord_bot_token"].asString();
 
   return token;
+}
+
+std::string getCurrentTimestamp() {
+  auto now = std::chrono::system_clock::now();
+
+  std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
+
+  std::stringstream ss;
+  ss << std::put_time(std::localtime(&currentTime), "%Y-%m-%d");
+
+  return ss.str();
 }
 
 int main(int argc, char *argv[]) {
@@ -98,19 +111,33 @@ int main(int argc, char *argv[]) {
       event.reply(reply);
     }
 
-    if (event.command.get_command_name() == "mystocks") {
+    if (event.command.get_command_name() == "stocks") {
       std::vector<std::pair<std::string, int>> stocks =
           dbHandler.getUserStocks(user.id.str());
+
+      if (stocks.size() == 0) {
+        event.reply("No stocks to display.");
+        return;
+      }
 
       std::ostringstream replyStream;
       replyStream << "## Your Stocks:";
 
       for (const auto &stock : stocks) {
+        if (stock.second == 0) {
+          continue;
+        }
+
         std::string symbol = stock.first;
         int quantity = stock.second;
 
+        std::ostringstream oss;
+        oss.imbue(std::locale(""));
+
+        oss << quantity;
+
         replyStream << "\n> **Stock: " << symbol
-                    << "**\n> Quantity: " << quantity << "\n";
+                    << "**\n> - Quantity: " << oss.str();
       }
 
       std::string reply = replyStream.str();
@@ -167,6 +194,10 @@ int main(int argc, char *argv[]) {
         if (dbHandler.updateUserStock(user.id.str(), symbol, quantity)) {
           event.reply("Successfully purchased stocks!");
         }
+
+        dbHandler.updateTransactionsHistory(user.id.str(), symbol, quantity,
+                                            price * quantity * -1.0,
+                                            getCurrentTimestamp());
       }
     }
 
@@ -201,7 +232,51 @@ int main(int argc, char *argv[]) {
         if (dbHandler.updateUserBalance(user.id.str(), price * quantity)) {
           event.reply("Successfully sold stocks!");
         }
+
+        dbHandler.updateTransactionsHistory(user.id.str(), symbol, quantity,
+                                            price * quantity,
+                                            getCurrentTimestamp());
       }
+    }
+
+    if (event.command.get_command_name() == "history") {
+      std::vector<std::vector<std::string>> history =
+          dbHandler.getUserHistory(user.id.str());
+
+      if (history.size() == 0) {
+        event.reply("No history to display.");
+        return;
+      }
+
+      std::ostringstream replyStream;
+      replyStream << "## Your Transactions:";
+
+      int count = 1;
+      for (auto &values : history) {
+        std::ostringstream oss;
+        oss.imbue(std::locale(""));
+
+        oss << std::stoi(values[1]);
+
+        std::string quantityString = oss.str();
+
+        oss.str("");
+
+        oss << std::fixed << std::setprecision(2)
+            << std::abs(std::stod(values[2]));
+
+        std::string valueString = oss.str();
+
+        replyStream << "\n> **" << count++ << ".** **"
+                    << (std::stod(values[2]) < 0.0 ? "Bought " : "Sold ")
+                    << values[0] << "**";
+        replyStream << "\n>     Quantity: " << quantityString;
+        replyStream << "\n>     Total Value: $" << valueString << " USD";
+      }
+
+      std::string reply = replyStream.str();
+
+      event.reply(reply);
     }
 
     if (event.command.get_command_name() == "help") {
@@ -213,7 +288,8 @@ int main(int argc, char *argv[]) {
                           "the given ticker and quantity"
                           "\n> `/sell [ticker] [quantity]` - Sell stocks of "
                           "the given ticker and quantity"
-                          "\n> `/mystocks` - Display your current stocks"
+                          "\n> `/stocks` - Display your current stocks"
+                          "\n> `/history` - Display your past transactions"
                           "\n> `/help` - Display this help message";
 
       event.reply(reply);
@@ -238,19 +314,25 @@ int main(int argc, char *argv[]) {
                                        bot.me.id);
 
       dpp::slashcommand buycommand("buy", "Purchase stocks.", bot.me.id);
-      buycommand.add_option(dpp::command_option(
-          dpp::co_string, "ticker", "The ticker for the stock", true));
-      buycommand.add_option(dpp::command_option(
-          dpp::co_integer, "quantity", "The amount of stocks to buy", true));
+      buycommand
+          .add_option(dpp::command_option(dpp::co_string, "ticker",
+                                          "The ticker for the stock", true))
+          .add_option(dpp::command_option(dpp::co_integer, "quantity",
+                                          "The amount of stocks to buy", true));
 
       dpp::slashcommand sellcommand("sell", "Sell your stocks.", bot.me.id);
-      sellcommand.add_option(dpp::command_option(
-          dpp::co_string, "ticker", "The ticker for the stock", true));
-      sellcommand.add_option(dpp::command_option(
-          dpp::co_integer, "quantity", "The amount of stocks to sell", true));
+      sellcommand
+          .add_option(dpp::command_option(dpp::co_string, "ticker",
+                                          "The ticker for the stock", true))
+          .add_option(dpp::command_option(dpp::co_integer, "quantity",
+                                          "The amount of stocks to sell",
+                                          true));
 
-      dpp::slashcommand getstockscommand("mystocks", "Displays your stocks.",
+      dpp::slashcommand getstockscommand("stocks", "Displays your stocks.",
                                          bot.me.id);
+
+      dpp::slashcommand historycommand(
+          "history", "Displays your past transactions.", bot.me.id);
 
       dpp::slashcommand helpcommand("help", "Displays a list of commands.",
                                     bot.me.id);
@@ -260,6 +342,7 @@ int main(int argc, char *argv[]) {
       bot.global_command_create(buycommand);
       bot.global_command_create(sellcommand);
       bot.global_command_create(getstockscommand);
+      bot.global_command_create(historycommand);
       bot.global_command_create(helpcommand);
     }
   });

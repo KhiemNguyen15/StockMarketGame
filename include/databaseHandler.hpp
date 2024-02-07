@@ -27,12 +27,17 @@ public:
   bool updateUserBalance(const std::string &userId, double balanceChange);
   bool updateUserStock(const std::string &userId, const std::string &stockName,
                        int quantityChange);
+  bool updateTransactionsHistory(const std::string &userId,
+                                 const std::string &stockName, int quantity,
+                                 double price, const std::string &timestamp);
 
   std::vector<std::pair<std::string, int>>
   getUserStocks(const std::string &userId);
   double getUserBalance(const std::string &userId);
   int getUserStockQuantity(const std::string &userId,
                            const std::string &stockName);
+  std::vector<std::vector<std::string>>
+  getUserHistory(const std::string &userId);
 };
 
 #endif // DATABASE_HANDLER_HPP
