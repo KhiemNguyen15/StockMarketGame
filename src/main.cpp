@@ -8,6 +8,7 @@
 #include <dpp/cluster.h>
 #include <dpp/dispatcher.h>
 #include <dpp/dpp.h>
+#include <dpp/message.h>
 #include <dpp/once.h>
 #include <dpp/presence.h>
 #include <dpp/restresults.h>
@@ -115,14 +116,10 @@ int main(int argc, char *argv[]) {
       std::vector<std::pair<std::string, int>> stocks =
           dbHandler.getUserStocks(user.id.str());
 
-      if (stocks.size() == 0) {
-        event.reply("No stocks to display.");
-        return;
-      }
-
       std::ostringstream replyStream;
       replyStream << "## Your Stocks:";
 
+      int stockCount = 0;
       for (const auto &stock : stocks) {
         if (stock.second == 0) {
           continue;
@@ -138,6 +135,13 @@ int main(int argc, char *argv[]) {
 
         replyStream << "\n> **Stock: " << symbol
                     << "**\n> - Quantity: " << oss.str();
+
+        stockCount++;
+      }
+
+      if (stockCount == 0) {
+        event.reply("No stocks to display.");
+        return;
       }
 
       std::string reply = replyStream.str();
@@ -190,9 +194,26 @@ int main(int argc, char *argv[]) {
         return;
       }
 
+      std::ostringstream oss;
+      oss.imbue(std::locale(""));
+      oss << quantity;
+
+      std::string quantityString = oss.str();
+
+      oss.str("");
+
+      oss << std::fixed << std::setprecision(2) << (price * quantity);
+
+      std::string priceString = oss.str();
+
+      std::ostringstream replyStream;
+      replyStream << "Successfully purchased **" << quantityString << " "
+                  << symbol << "** stock" << (quantity > 1 ? "s" : "")
+                  << " for $**" << priceString << "**.";
+
       if (dbHandler.updateUserBalance(user.id.str(), price * quantity * -1.0)) {
         if (dbHandler.updateUserStock(user.id.str(), symbol, quantity)) {
-          event.reply("Successfully purchased stocks!");
+          event.reply(replyStream.str());
         }
 
         dbHandler.updateTransactionsHistory(user.id.str(), symbol, quantity,
@@ -228,9 +249,26 @@ int main(int argc, char *argv[]) {
 
       double balance = dbHandler.getUserBalance(user.id.str());
 
+      std::ostringstream oss;
+      oss.imbue(std::locale(""));
+      oss << quantity;
+
+      std::string quantityString = oss.str();
+
+      oss.str("");
+
+      oss << std::fixed << std::setprecision(2) << (price * quantity);
+
+      std::string priceString = oss.str();
+
+      std::ostringstream replyStream;
+      replyStream << "Successfully sold **" << quantityString << " " << symbol
+                  << "** stock" << (quantity > 1 ? "s" : "") << " for $**"
+                  << priceString << "**.";
+
       if (dbHandler.updateUserStock(user.id.str(), symbol, quantity * -1)) {
         if (dbHandler.updateUserBalance(user.id.str(), price * quantity)) {
-          event.reply("Successfully sold stocks!");
+          event.reply(replyStream.str());
         }
 
         dbHandler.updateTransactionsHistory(user.id.str(), symbol, quantity,
@@ -269,9 +307,10 @@ int main(int argc, char *argv[]) {
 
         replyStream << "\n> **" << count++ << ".** **"
                     << (std::stod(values[2]) < 0.0 ? "Bought " : "Sold ")
-                    << values[0] << "**";
-        replyStream << "\n>     Quantity: " << quantityString;
-        replyStream << "\n>     Total Value: $" << valueString << " USD";
+                    << values[0] << "**"
+                    << "\n>     Quantity: " << quantityString
+                    << "\n>     Total Value: $" << valueString << " USD"
+                    << "\n>     Date: " << values[3];
       }
 
       std::string reply = replyStream.str();
