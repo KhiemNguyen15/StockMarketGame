@@ -9,5 +9,3 @@ cd build
 cmake ..
 
 make
-
-echo "Build completed successfully."
