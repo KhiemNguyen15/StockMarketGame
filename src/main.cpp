@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
           dbHandler.getUserStocks(user.id.str());
 
       std::ostringstream replyStream;
-      replyStream << "## Your Stocks:";
+      replyStream << "## " << user.username << "'s Stocks:";
 
       int stockCount = 0;
       for (const auto &stock : stocks) {
@@ -157,9 +157,11 @@ int main(int argc, char *argv[]) {
       oss << std::fixed << std::setprecision(2) << balance;
       std::string balanceString = oss.str();
 
-      std::string reply = "## Your Balance:\n> $" + balanceString;
+      std::ostringstream replyStream;
+      replyStream << "## " << user.username << "'s Balance:\n> $"
+                  << balanceString;
 
-      event.reply(reply);
+      event.reply(replyStream.str());
     }
 
     if (event.command.get_command_name() == "buy") {
@@ -287,7 +289,7 @@ int main(int argc, char *argv[]) {
       }
 
       std::ostringstream replyStream;
-      replyStream << "## Your Transactions:";
+      replyStream << "## " << user.username << "'s Transactions:";
 
       int count = 1;
       for (auto &values : history) {
