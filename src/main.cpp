@@ -95,7 +95,11 @@ int main(int argc, char *argv[]) {
 
       oss.str("");
 
-      oss << std::fixed << std::setprecision(2) << change;
+      if (price < 10.0) {
+        oss << std::fixed << std::setprecision(4) << change;
+      } else {
+        oss << std::fixed << std::setprecision(2) << change;
+      }
       std::string changeString = oss.str();
 
       oss.str("");
