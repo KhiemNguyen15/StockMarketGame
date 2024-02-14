@@ -86,7 +86,11 @@ int main(int argc, char *argv[]) {
       std::ostringstream oss;
       oss.imbue(std::locale(""));
 
-      oss << std::fixed << std::setprecision(2) << price;
+      if (price < 10.0) {
+        oss << std::fixed << std::setprecision(4) << price;
+      } else {
+        oss << std::fixed << std::setprecision(2) << price;
+      }
       std::string priceString = oss.str();
 
       oss.str("");
