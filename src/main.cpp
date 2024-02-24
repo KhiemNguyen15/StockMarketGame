@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
       std::ostringstream replyStream;
       replyStream << "Successfully purchased **" << quantityString << " "
                   << symbol << "** stock" << (quantity > 1 ? "s" : "")
-                  << " for $**" << priceString << "**.";
+                  << " for **$" << priceString << "**.";
 
       if (dbHandler.updateUserBalance(user.id.str(), price * quantity * -1.0)) {
         if (dbHandler.updateUserStock(user.id.str(), symbol, quantity)) {
@@ -273,7 +273,7 @@ int main(int argc, char *argv[]) {
 
       std::ostringstream replyStream;
       replyStream << "Successfully sold **" << quantityString << " " << symbol
-                  << "** stock" << (quantity > 1 ? "s" : "") << " for $**"
+                  << "** stock" << (quantity > 1 ? "s" : "") << " for **$"
                   << priceString << "**.";
 
       if (dbHandler.updateUserStock(user.id.str(), symbol, quantity * -1)) {
@@ -301,25 +301,35 @@ int main(int argc, char *argv[]) {
 
       int count = 1;
       for (auto &values : history) {
+        int quantity = std::stoi(values[1]);
+        double value = std::abs(std::stod(values[2]));
+        double price = value / quantity;
+
         std::ostringstream oss;
         oss.imbue(std::locale(""));
 
-        oss << std::stoi(values[1]);
+        oss << quantity;
 
         std::string quantityString = oss.str();
 
         oss.str("");
 
-        oss << std::fixed << std::setprecision(2)
-            << std::abs(std::stod(values[2]));
+        oss << std::fixed << std::setprecision(2) << value;
 
         std::string valueString = oss.str();
+
+        oss.str("");
+
+        oss << std::fixed << std::setprecision((price < 10.0) ? 4 : 2) << price;
+
+        std::string priceString = oss.str();
 
         replyStream << "\n> **" << count++ << ".** **"
                     << (std::stod(values[2]) < 0.0 ? "Bought " : "Sold ")
                     << values[0] << "**"
                     << "\n>     Quantity: " << quantityString
-                    << "\n>     Total Value: $" << valueString << " USD"
+                    << "\n>     Price: $" << priceString << "\n>     Total: $"
+                    << valueString << " USD"
                     << "\n>     Date: " << values[3];
       }
 
